@@ -1,31 +1,58 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+
+async function apiText(path) {
+  const r = await fetch(path)
+  if (!r.ok) throw new Error(await r.text())
+  return r.text()
+}
+
+async function apiJson(path, opts) {
+  const r = await fetch(path, opts)
+  if (!r.ok) throw new Error(await r.text())
+  return r.json()
+}
 
 export default function App() {
   const [status, setStatus] = useState('loading...')
+  const [error, setError] = useState('')
+
+  const [categories, setCategories] = useState([])
   const [resources, setResources] = useState([])
+
   const [form, setForm] = useState({
-    categoryId: 1,
+    categoryId: '',
     title: '',
     description: '',
     location: '',
   })
-  const [error, setError] = useState('')
 
-  const load = async () => {
-    const res = await fetch('/api/resources')
-    if (!res.ok) throw new Error(await res.text())
-    return res.json()
+  const categoryNameById = useMemo(() => {
+    const m = new Map()
+    for (const c of categories) m.set(String(c.id), c.name)
+    return m
+  }, [categories])
+
+  const loadAll = async () => {
+    const [cats, res] = await Promise.all([
+      apiJson('/api/categories'),
+      apiJson('/api/resources'),
+    ])
+    setCategories(cats)
+    setResources(res)
+
+    // если categoryId пустой — выберем первую категорию
+    if (!form.categoryId && cats.length) {
+      setForm((f) => ({ ...f, categoryId: String(cats[0].id) }))
+    }
   }
 
   useEffect(() => {
-    fetch('/api/health')
-      .then(r => r.text())
+    apiText('/api/health')
       .then(setStatus)
       .catch(() => setStatus('error'))
 
-    load()
-      .then(setResources)
-      .catch(e => setError(String(e.message || e)))
+    loadAll().catch((e) => setError(String(e.message || e)))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const onCreate = async (e) => {
@@ -39,20 +66,27 @@ export default function App() {
       location: form.location.trim() ? form.location.trim() : null,
     }
 
-    const res = await fetch('/api/resources', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    })
-
-    if (!res.ok) {
-      setError(await res.text())
+    if (!payload.categoryId) {
+      setError('Choose a category')
+      return
+    }
+    if (!payload.title) {
+      setError('Title is required')
       return
     }
 
-    setForm({ categoryId: 1, title: '', description: '', location: '' })
-    const fresh = await load()
-    setResources(fresh)
+    try {
+      await apiJson('/api/resources', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      setForm((f) => ({ ...f, title: '', description: '', location: '' }))
+      const fresh = await apiJson('/api/resources')
+      setResources(fresh)
+    } catch (e) {
+      setError(String(e.message || e))
+    }
   }
 
   return (
@@ -60,21 +94,27 @@ export default function App() {
       <h1>BookingHub</h1>
       <p>Backend status: {status}</p>
 
-      <h2>Resources</h2>
-
       {error && (
         <div style={{ padding: 10, background: '#ffe3e3', marginBottom: 12 }}>
           {error}
         </div>
       )}
 
+      <h2>Create resource</h2>
       <form onSubmit={onCreate} style={{ display: 'grid', gap: 8, marginBottom: 16 }}>
         <label>
-          Category ID (пока руками):
-          <input
+          Category:
+          <select
             value={form.categoryId}
             onChange={(e) => setForm({ ...form, categoryId: e.target.value })}
-          />
+            style={{ marginLeft: 8 }}
+          >
+            {categories.map((c) => (
+              <option key={c.id} value={String(c.id)}>
+                {c.name}
+              </option>
+            ))}
+          </select>
         </label>
 
         <label>
@@ -101,13 +141,18 @@ export default function App() {
           />
         </label>
 
-        <button type="submit">Create resource</button>
+        <button type="submit">Create</button>
       </form>
 
+      <h2>Resources</h2>
       <ul>
         {resources.map((r) => (
           <li key={r.id}>
-            <b>{r.title}</b> (categoryId: {r.categoryId}) {r.location ? `— ${r.location}` : ''}
+            <b>{r.title}</b>{' '}
+            <span style={{ opacity: 0.7 }}>
+              ({categoryNameById.get(String(r.categoryId)) || `categoryId:${r.categoryId}`})
+            </span>
+            {r.location ? ` — ${r.location}` : ''}
           </li>
         ))}
       </ul>

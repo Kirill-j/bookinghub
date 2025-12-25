@@ -48,6 +48,8 @@ func main() {
 
 	resourceRepo := repo.NewResourceRepo(db)
 	resourceHandler := handler.NewResourceHandler(resourceRepo)
+	categoryRepo := repo.NewCategoryRepo(db)
+	categoryHandler := handler.NewCategoryHandler(categoryRepo)
 
 	r := chi.NewRouter()
 
@@ -62,6 +64,8 @@ func main() {
 			w.WriteHeader(http.StatusOK)
 			w.Write([]byte("ok"))
 		})
+
+		r.Get("/categories", categoryHandler.List)
 
 		r.Get("/resources", resourceHandler.List)
 		r.Post("/resources", resourceHandler.Create)
