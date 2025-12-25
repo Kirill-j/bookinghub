@@ -59,6 +59,9 @@ func main() {
 	categoryHandler := handler.NewCategoryHandler(categoryRepo)
 	userRepo := repo.NewUserRepo(db)
 	authHandler := handler.NewAuthHandler(userRepo, authSvc)
+	bookingRepo := repo.NewBookingRepo(db)
+	bookingSvc := service.NewBookingService(bookingRepo)
+	bookingHandler := handler.NewBookingHandler(bookingRepo, bookingSvc)
 
 	r := chi.NewRouter()
 
@@ -91,6 +94,21 @@ func main() {
 			// защищённый роут
 			r.With(handler.AuthMiddleware(authSvc)).Get("/me", authHandler.Me)
 		})
+
+		// Бронирования: только авторизованные
+		r.With(handler.AuthMiddleware(authSvc)).Get("/bookings/my", bookingHandler.My)
+		r.With(handler.AuthMiddleware(authSvc)).Post("/bookings", bookingHandler.Create)
+
+		// Менеджер: смотреть ожидающие и менять статус
+		r.With(
+			handler.AuthMiddleware(authSvc),
+			handler.RequireRoles(domain.RoleManager, domain.RoleAdmin),
+		).Get("/bookings/pending", bookingHandler.Pending)
+
+		r.With(
+			handler.AuthMiddleware(authSvc),
+			handler.RequireRoles(domain.RoleManager, domain.RoleAdmin),
+		).Patch("/bookings/status", bookingHandler.UpdateStatus)
 	})
 
 	r.Get("/db/ping", app.handleDBPing)
