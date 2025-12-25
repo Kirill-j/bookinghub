@@ -92,3 +92,26 @@ func (r *BookingRepo) GetByID(ctx context.Context, id uint64) (*domain.Booking, 
 	}
 	return &b, nil
 }
+
+func (r *BookingRepo) Cancel(ctx context.Context, id uint64) error {
+	_, err := r.db.ExecContext(ctx, `
+		UPDATE bookings
+		SET status = 'CANCELED'
+		WHERE id = ?
+	`, id)
+	return err
+}
+
+func (r *BookingRepo) ListByResourceBetween(ctx context.Context, resourceID uint64, from, to time.Time) ([]domain.Booking, error) {
+	var items []domain.Booking
+	err := r.db.SelectContext(ctx, &items, `
+		SELECT id, resource_id, user_id, start_at, end_at, status, manager_comment, created_at, updated_at
+		FROM bookings
+		WHERE resource_id = ?
+		  AND status IN ('PENDING','APPROVED')
+		  AND start_at >= ?
+		  AND start_at < ?
+		ORDER BY start_at ASC
+	`, resourceID, from, to)
+	return items, err
+}

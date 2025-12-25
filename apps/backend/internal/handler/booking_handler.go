@@ -7,6 +7,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/go-chi/chi/v5"
+
 	"bookinghub-backend/internal/domain"
 	"bookinghub-backend/internal/repo"
 	"bookinghub-backend/internal/service"
@@ -104,10 +106,8 @@ type updateStatusReq struct {
 }
 
 func (h *BookingHandler) UpdateStatus(w http.ResponseWriter, r *http.Request) {
-	// id берём из query ?id=123 чтобы не городить роут-параметры.
-	// Потом улучшим на /bookings/{id}.
-	idStr := strings.TrimSpace(r.URL.Query().Get("id"))
-	if idStr == "" {
+	idStr := chi.URLParam(r, "id")
+	if strings.TrimSpace(idStr) == "" {
 		http.Error(w, "Нужен параметр id", http.StatusBadRequest)
 		return
 	}
@@ -144,6 +144,56 @@ func (h *BookingHandler) UpdateStatus(w http.ResponseWriter, r *http.Request) {
 
 	if err := h.repo.UpdateStatus(r.Context(), uint64(id64), req.Status, req.ManagerComment); err != nil {
 		http.Error(w, "Не удалось обновить статус: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
+}
+
+func (h *BookingHandler) Cancel(w http.ResponseWriter, r *http.Request) {
+	uid := GetUserID(r)
+	if uid == 0 {
+		http.Error(w, "Требуется авторизация", http.StatusUnauthorized)
+		return
+	}
+
+	idStr := chi.URLParam(r, "id")
+	id64, err := strconv.ParseUint(strings.TrimSpace(idStr), 10, 64)
+	if err != nil {
+		http.Error(w, "Некорректный id", http.StatusBadRequest)
+		return
+	}
+
+	b, err := h.repo.GetByID(r.Context(), uint64(id64))
+	if err != nil {
+		http.Error(w, "Ошибка базы: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if b == nil {
+		http.Error(w, "Бронирование не найдено", http.StatusNotFound)
+		return
+	}
+
+	// Только владелец брони
+	if b.UserID != uid {
+		http.Error(w, "Недостаточно прав", http.StatusForbidden)
+		return
+	}
+
+	// Можно отменять только PENDING/APPROVED
+	if b.Status != domain.BookingPending && b.Status != domain.BookingApproved {
+		http.Error(w, "Эту бронь нельзя отменить", http.StatusBadRequest)
+		return
+	}
+
+	// Правило: отмена возможна минимум за 2 часа
+	if time.Until(b.StartAt) < 2*time.Hour {
+		http.Error(w, "Отмена возможна не позднее чем за 2 часа до начала", http.StatusBadRequest)
+		return
+	}
+
+	if err := h.repo.Cancel(r.Context(), b.ID); err != nil {
+		http.Error(w, "Не удалось отменить бронь: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 

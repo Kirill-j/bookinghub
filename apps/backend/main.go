@@ -62,6 +62,7 @@ func main() {
 	bookingRepo := repo.NewBookingRepo(db)
 	bookingSvc := service.NewBookingService(bookingRepo)
 	bookingHandler := handler.NewBookingHandler(bookingRepo, bookingSvc)
+	resourceBookingsHandler := handler.NewResourceBookingsHandler(bookingRepo)
 
 	r := chi.NewRouter()
 
@@ -108,7 +109,11 @@ func main() {
 		r.With(
 			handler.AuthMiddleware(authSvc),
 			handler.RequireRoles(domain.RoleManager, domain.RoleAdmin),
-		).Patch("/bookings/status", bookingHandler.UpdateStatus)
+		).Patch("/bookings/{id}/status", bookingHandler.UpdateStatus)
+
+		r.With(handler.AuthMiddleware(authSvc)).Post("/bookings/{id}/cancel", bookingHandler.Cancel)
+
+		r.Get("/resources/{id}/bookings", resourceBookingsHandler.List)
 	})
 
 	r.Get("/db/ping", app.handleDBPing)
