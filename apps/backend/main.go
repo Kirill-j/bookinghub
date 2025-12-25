@@ -12,6 +12,9 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/jmoiron/sqlx"
 	"github.com/joho/godotenv"
+
+	"bookinghub-backend/internal/handler"
+	"bookinghub-backend/internal/repo"
 )
 
 type App struct {
@@ -43,6 +46,9 @@ func main() {
 
 	app := &App{DB: db}
 
+	resourceRepo := repo.NewResourceRepo(db)
+	resourceHandler := handler.NewResourceHandler(resourceRepo)
+
 	r := chi.NewRouter()
 
 	// Логи + базовая защита от паники
@@ -51,16 +57,14 @@ func main() {
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 
-	// Новый эндпоинт под фронт (/api/*)
-	r.Get("/api/health", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("ok"))
-	})
+	r.Route("/api", func(r chi.Router) {
+		r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte("ok"))
+		})
 
-	// Оставим и старый — удобно тестировать
-	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("ok"))
+		r.Get("/resources", resourceHandler.List)
+		r.Post("/resources", resourceHandler.Create)
 	})
 
 	r.Get("/db/ping", app.handleDBPing)
