@@ -37,6 +37,8 @@ export default function App() {
 
   const [myBookings, setMyBookings] = useState([])
 
+  const [resourceBookings, setResourceBookings] = useState([])
+
   const [pendingBookings, setPendingBookings] = useState([])
   const [managerComment, setManagerComment] = useState('')
 
@@ -105,6 +107,17 @@ export default function App() {
     setMyBookings(Array.isArray(items) ? items : [])
   }
 
+  const loadResourceBookings = async (resourceId, date) => {
+    if (!resourceId || !date) {
+      setResourceBookings([])
+      return
+    }
+
+    const url = `/api/resources/${resourceId}/bookings?from=${date}&to=${date}`
+    const items = await apiJson(url, {}, token)
+    setResourceBookings(Array.isArray(items) ? items : [])
+  }
+
   const loadPending = async (t) => {
     if (!t) {
       setPendingBookings([])
@@ -147,6 +160,11 @@ export default function App() {
     loadMyBookings(token).catch(() => {})
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  useEffect(() => {
+    loadResourceBookings(bookingForm.resourceId, bookingForm.date).catch(() => {})
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bookingForm.resourceId, bookingForm.date])
 
   const onLogin = async (e) => {
     e.preventDefault()
@@ -250,6 +268,9 @@ export default function App() {
       )
 
       await loadMyBookings(token)
+
+      await loadResourceBookings(bookingForm.resourceId, bookingForm.date)
+
     } catch (e) {
       setError(String(e.message || e))
     }
@@ -417,6 +438,22 @@ export default function App() {
             <button type="submit">Забронировать</button>
             <div style={{ fontSize: 12, opacity: 0.75 }}>
               Правило: минимум 30 минут. Отмена — не позднее чем за 2 часа до начала.
+            </div>
+
+            <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px dashed #bbb' }}>
+              <b>Занятость на выбранную дату:</b>
+
+              {(resourceBookings?.length || 0) === 0 ? (
+                <div style={{ opacity: 0.75 }}>Свободно (броней нет)</div>
+              ) : (
+                <ul>
+                  {resourceBookings.map((b) => (
+                    <li key={b.id}>
+                      {String(b.startAt)} → {String(b.endAt)} — {b.status}
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
           </form>
         </div>

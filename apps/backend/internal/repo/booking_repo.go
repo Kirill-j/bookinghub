@@ -103,7 +103,7 @@ func (r *BookingRepo) Cancel(ctx context.Context, id uint64) error {
 }
 
 func (r *BookingRepo) ListByResourceBetween(ctx context.Context, resourceID uint64, from, to time.Time) ([]domain.Booking, error) {
-	var items []domain.Booking
+	items := make([]domain.Booking, 0)
 	err := r.db.SelectContext(ctx, &items, `
 		SELECT id, resource_id, user_id, start_at, end_at, status, manager_comment, created_at, updated_at
 		FROM bookings
