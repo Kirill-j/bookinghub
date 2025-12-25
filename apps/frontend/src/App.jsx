@@ -13,7 +13,7 @@ async function apiJson(path, opts) {
 }
 
 export default function App() {
-  const [status, setStatus] = useState('loading...')
+  const [status, setStatus] = useState('загрузка...')
   const [error, setError] = useState('')
 
   const [categories, setCategories] = useState([])
@@ -40,7 +40,6 @@ export default function App() {
     setCategories(cats)
     setResources(res)
 
-    // если categoryId пустой — выберем первую категорию
     if (!form.categoryId && cats.length) {
       setForm((f) => ({ ...f, categoryId: String(cats[0].id) }))
     }
@@ -48,8 +47,8 @@ export default function App() {
 
   useEffect(() => {
     apiText('/api/health')
-      .then(setStatus)
-      .catch(() => setStatus('error'))
+      .then(() => setStatus('ок'))
+      .catch(() => setStatus('ошибка'))
 
     loadAll().catch((e) => setError(String(e.message || e)))
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -67,11 +66,11 @@ export default function App() {
     }
 
     if (!payload.categoryId) {
-      setError('Choose a category')
+      setError('Выберите категорию')
       return
     }
     if (!payload.title) {
-      setError('Title is required')
+      setError('Название обязательно')
       return
     }
 
@@ -92,7 +91,7 @@ export default function App() {
   return (
     <div style={{ padding: 20, maxWidth: 900 }}>
       <h1>BookingHub</h1>
-      <p>Backend status: {status}</p>
+      <p>Статус сервера: {status}</p>
 
       {error && (
         <div style={{ padding: 10, background: '#ffe3e3', marginBottom: 12 }}>
@@ -100,10 +99,10 @@ export default function App() {
         </div>
       )}
 
-      <h2>Create resource</h2>
+      <h2>Создать ресурс</h2>
       <form onSubmit={onCreate} style={{ display: 'grid', gap: 8, marginBottom: 16 }}>
         <label>
-          Category:
+          Категория:
           <select
             value={form.categoryId}
             onChange={(e) => setForm({ ...form, categoryId: e.target.value })}
@@ -118,7 +117,7 @@ export default function App() {
         </label>
 
         <label>
-          Title:
+          Название:
           <input
             value={form.title}
             onChange={(e) => setForm({ ...form, title: e.target.value })}
@@ -126,7 +125,7 @@ export default function App() {
         </label>
 
         <label>
-          Description:
+          Описание:
           <input
             value={form.description}
             onChange={(e) => setForm({ ...form, description: e.target.value })}
@@ -134,23 +133,23 @@ export default function App() {
         </label>
 
         <label>
-          Location:
+          Место/локация:
           <input
             value={form.location}
             onChange={(e) => setForm({ ...form, location: e.target.value })}
           />
         </label>
 
-        <button type="submit">Create</button>
+        <button type="submit">Создать</button>
       </form>
 
-      <h2>Resources</h2>
+      <h2>Ресурсы</h2>
       <ul>
         {resources.map((r) => (
           <li key={r.id}>
             <b>{r.title}</b>{' '}
             <span style={{ opacity: 0.7 }}>
-              ({categoryNameById.get(String(r.categoryId)) || `categoryId:${r.categoryId}`})
+              ({categoryNameById.get(String(r.categoryId)) || `категория #${r.categoryId}`})
             </span>
             {r.location ? ` — ${r.location}` : ''}
           </li>
