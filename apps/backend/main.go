@@ -14,6 +14,7 @@ import (
 	"github.com/jmoiron/sqlx"
 	"github.com/joho/godotenv"
 
+	"bookinghub-backend/internal/domain"
 	"bookinghub-backend/internal/handler"
 	"bookinghub-backend/internal/repo"
 	"bookinghub-backend/internal/service"
@@ -76,7 +77,12 @@ func main() {
 		r.Get("/categories", categoryHandler.List)
 
 		r.Get("/resources", resourceHandler.List)
-		r.Post("/resources", resourceHandler.Create)
+
+		// Создание ресурса — только MANAGER/ADMIN, и только для авторизованных
+		r.With(
+			handler.AuthMiddleware(authSvc),
+			handler.RequireRoles(domain.RoleManager, domain.RoleAdmin),
+		).Post("/resources", resourceHandler.Create)
 
 		r.Route("/auth", func(r chi.Router) {
 			r.Post("/register", authHandler.Register)
