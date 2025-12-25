@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -15,6 +16,7 @@ import (
 
 	"bookinghub-backend/internal/handler"
 	"bookinghub-backend/internal/repo"
+	"bookinghub-backend/internal/service"
 )
 
 type App struct {
@@ -23,6 +25,10 @@ type App struct {
 
 func main() {
 	_ = godotenv.Load()
+	jwtSecret := getEnv("JWT_SECRET", "dev-secret")
+	ttlStr := getEnv("JWT_ACCESS_TTL_MIN", "15")
+	ttlMin, _ := strconv.Atoi(ttlStr)
+	authSvc := service.NewAuthService(jwtSecret, ttlMin)
 
 	port := getEnv("PORT", "8080")
 
@@ -50,6 +56,8 @@ func main() {
 	resourceHandler := handler.NewResourceHandler(resourceRepo)
 	categoryRepo := repo.NewCategoryRepo(db)
 	categoryHandler := handler.NewCategoryHandler(categoryRepo)
+	userRepo := repo.NewUserRepo(db)
+	authHandler := handler.NewAuthHandler(userRepo, authSvc)
 
 	r := chi.NewRouter()
 
@@ -69,6 +77,14 @@ func main() {
 
 		r.Get("/resources", resourceHandler.List)
 		r.Post("/resources", resourceHandler.Create)
+
+		r.Route("/auth", func(r chi.Router) {
+			r.Post("/register", authHandler.Register)
+			r.Post("/login", authHandler.Login)
+
+			// защищённый роут
+			r.With(handler.AuthMiddleware(authSvc)).Get("/me", authHandler.Me)
+		})
 	})
 
 	r.Get("/db/ping", app.handleDBPing)
