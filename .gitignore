@@ -1,0 +1,15 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Backend
+apps/backend/.env
+
+# Frontend
+apps/frontend/node_modules
+apps/frontend/dist
+apps/frontend/.env
+apps/frontend/.env.local
+
+# IDE
+.vscode

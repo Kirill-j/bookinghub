@@ -8,8 +8,10 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/jmoiron/sqlx"
+	"github.com/joho/godotenv"
 )
 
 type App struct {
@@ -17,7 +19,8 @@ type App struct {
 }
 
 func main() {
-	// Конфиг из env (пока самый простой вариант)
+	_ = godotenv.Load()
+
 	port := getEnv("PORT", "8080")
 
 	dbHost := getEnv("DB_HOST", "127.0.0.1")
@@ -26,8 +29,6 @@ func main() {
 	dbPass := getEnv("DB_PASSWORD", "")
 	dbName := getEnv("DB_NAME", "bookinghub")
 
-	// DSN для MySQL
-	// parseTime=true — чтобы DATETIME нормально читался в time.Time
 	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?parseTime=true&charset=utf8mb4&collation=utf8mb4_unicode_ci",
 		dbUser, dbPass, dbHost, dbPort, dbName,
 	)
@@ -36,8 +37,6 @@ func main() {
 	if err != nil {
 		log.Fatalf("db open error: %v", err)
 	}
-
-	// Настройки пула (базово)
 	db.SetMaxOpenConns(10)
 	db.SetMaxIdleConns(5)
 	db.SetConnMaxLifetime(30 * time.Minute)
@@ -46,12 +45,24 @@ func main() {
 
 	r := chi.NewRouter()
 
+	// Логи + базовая защита от паники
+	r.Use(middleware.RequestID)
+	r.Use(middleware.RealIP)
+	r.Use(middleware.Logger)
+	r.Use(middleware.Recoverer)
+
+	// Новый эндпоинт под фронт (/api/*)
 	r.Get("/api/health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("ok"))
 	})
 
-	// Проверка связи с БД
+	// Оставим и старый — удобно тестировать
+	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("ok"))
+	})
+
 	r.Get("/db/ping", app.handleDBPing)
 
 	log.Printf("Backend started on http://localhost:%s", port)
