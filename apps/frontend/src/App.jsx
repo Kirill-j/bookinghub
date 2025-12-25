@@ -35,6 +35,8 @@ export default function App() {
   const [categories, setCategories] = useState([])
   const [resources, setResources] = useState([])
 
+  const [myBookings, setMyBookings] = useState([])
+
   const [loginForm, setLoginForm] = useState({
     email: 'manager@bookinghub.local',
     password: '123456',
@@ -45,6 +47,13 @@ export default function App() {
     title: '',
     description: '',
     location: '',
+  })
+
+  const [bookingForm, setBookingForm] = useState({
+    resourceId: '',
+    date: '',
+    start: '10:00',
+    end: '11:00',
   })
 
   const categoryNameById = useMemo(() => {
@@ -64,6 +73,9 @@ export default function App() {
     if (!resourceForm.categoryId && cats.length) {
       setResourceForm((f) => ({ ...f, categoryId: String(cats[0].id) }))
     }
+    if (!bookingForm.resourceId && res.length) {
+      setBookingForm((f) => ({ ...f, resourceId: String(res[0].id) }))
+    }
   }
 
   const loadMe = async (t) => {
@@ -75,11 +87,19 @@ export default function App() {
       const u = await apiJson('/api/auth/me', {}, t)
       setMe(u)
     } catch {
-      // токен протух/неверный
       setMe(null)
       setToken('')
       setTokenState('')
     }
+  }
+
+  const loadMyBookings = async (t) => {
+    if (!t) {
+      setMyBookings([])
+      return
+    }
+    const items = await apiJson('/api/bookings/my', {}, t)
+    setMyBookings(Array.isArray(items) ? items : [])
   }
 
   useEffect(() => {
@@ -88,7 +108,8 @@ export default function App() {
       .catch(() => setServerStatus('ошибка'))
 
     loadPublic().catch((e) => setError(String(e.message || e)))
-    loadMe(token)
+    loadMe(token).catch(() => {})
+    loadMyBookings(token).catch(() => {})
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -107,13 +128,14 @@ export default function App() {
             password: loginForm.password,
           }),
         },
-        '' // токен не нужен
+        ''
       )
 
       const t = data.accessToken
       setToken(t)
       setTokenState(t)
       await loadMe(t)
+      await loadMyBookings(t)
     } catch (e) {
       setError(String(e.message || e))
     }
@@ -123,6 +145,7 @@ export default function App() {
     setToken('')
     setTokenState('')
     setMe(null)
+    setMyBookings([])
   }
 
   const canCreateResources = me && (me.role === 'MANAGER' || me.role === 'ADMIN')
@@ -154,6 +177,51 @@ export default function App() {
       setResourceForm((f) => ({ ...f, title: '', description: '', location: '' }))
       const fresh = await apiJson('/api/resources', {}, token)
       setResources(fresh)
+      if (!bookingForm.resourceId && fresh.length) {
+        setBookingForm((f) => ({ ...f, resourceId: String(fresh[0].id) }))
+      }
+    } catch (e) {
+      setError(String(e.message || e))
+    }
+  }
+
+  const onCreateBooking = async (e) => {
+    e.preventDefault()
+    setError('')
+
+    if (!me) return setError('Сначала войдите в систему')
+    if (!bookingForm.resourceId) return setError('Выберите ресурс')
+    if (!bookingForm.date) return setError('Выберите дату')
+
+    const startAt = `${bookingForm.date}T${bookingForm.start}:00`
+    const endAt = `${bookingForm.date}T${bookingForm.end}:00`
+
+    try {
+      await apiJson(
+        '/api/bookings',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            resourceId: Number(bookingForm.resourceId),
+            startAt,
+            endAt,
+          }),
+        },
+        token
+      )
+
+      await loadMyBookings(token)
+    } catch (e) {
+      setError(String(e.message || e))
+    }
+  }
+
+  const onCancelBooking = async (id) => {
+    setError('')
+    try {
+      await apiJson(`/api/bookings/${id}/cancel`, { method: 'POST' }, token)
+      await loadMyBookings(token)
     } catch (e) {
       setError(String(e.message || e))
     }
@@ -199,7 +267,8 @@ export default function App() {
             </label>
             <button type="submit">Войти</button>
             <div style={{ fontSize: 12, opacity: 0.75 }}>
-              Тестовые аккаунты: admin@bookinghub.local / manager@bookinghub.local / user@bookinghub.local, пароль 123456
+              Тестовые аккаунты: admin@bookinghub.local / manager@bookinghub.local / user@bookinghub.local,
+              пароль 123456
             </div>
           </form>
         )}
@@ -257,6 +326,86 @@ export default function App() {
           <div style={{ fontSize: 12, opacity: 0.75 }}>
             Войдите как manager@bookinghub.local или admin@bookinghub.local.
           </div>
+        </div>
+      )}
+
+      {me && (
+        <div style={{ padding: 12, border: '1px solid #ddd', marginBottom: 16 }}>
+          <h2 style={{ marginTop: 0 }}>Создать бронирование</h2>
+
+          <form onSubmit={onCreateBooking} style={{ display: 'grid', gap: 8 }}>
+            <label>
+              Ресурс:
+              <select
+                value={bookingForm.resourceId}
+                onChange={(e) => setBookingForm({ ...bookingForm, resourceId: e.target.value })}
+                style={{ marginLeft: 8 }}
+              >
+                {resources.map((r) => (
+                  <option key={r.id} value={String(r.id)}>
+                    {r.title}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label>
+              Дата:
+              <input
+                type="date"
+                value={bookingForm.date}
+                onChange={(e) => setBookingForm({ ...bookingForm, date: e.target.value })}
+              />
+            </label>
+
+            <label>
+              Начало:
+              <input
+                type="time"
+                value={bookingForm.start}
+                onChange={(e) => setBookingForm({ ...bookingForm, start: e.target.value })}
+              />
+            </label>
+
+            <label>
+              Конец:
+              <input
+                type="time"
+                value={bookingForm.end}
+                onChange={(e) => setBookingForm({ ...bookingForm, end: e.target.value })}
+              />
+            </label>
+
+            <button type="submit">Забронировать</button>
+            <div style={{ fontSize: 12, opacity: 0.75 }}>
+              Правило: минимум 30 минут. Отмена — не позднее чем за 2 часа до начала.
+            </div>
+          </form>
+        </div>
+      )}
+
+      {me && (
+        <div style={{ padding: 12, border: '1px solid #ddd', marginBottom: 16 }}>
+          <h2 style={{ marginTop: 0 }}>Мои бронирования</h2>
+
+          {(myBookings?.length || 0) === 0 ? (
+            <div style={{ opacity: 0.75 }}>Пока нет бронирований</div>
+          ) : (
+            <ul>
+              {myBookings.map((b) => (
+                <li key={b.id} style={{ marginBottom: 8 }}>
+                  <b>#{b.id}</b> ресурс #{b.resourceId} —{' '}
+                  {new Date(b.startAt).toLocaleString()} → {new Date(b.endAt).toLocaleString()} —{' '}
+                  <b>{b.status}</b>{' '}
+                  {(b.status === 'PENDING' || b.status === 'APPROVED') && (
+                    <button style={{ marginLeft: 8 }} onClick={() => onCancelBooking(b.id)}>
+                      Отменить
+                    </button>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       )}
 
