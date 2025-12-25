@@ -34,6 +34,11 @@ func (h *BookingHandler) My(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Не удалось получить бронирования: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
+
+	if items == nil {
+		items = make([]domain.Booking, 0)
+	}
+
 	writeJSON(w, http.StatusOK, items)
 }
 
@@ -97,6 +102,11 @@ func (h *BookingHandler) Pending(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Не удалось получить список: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
+
+	if items == nil {
+		items = make([]domain.Booking, 0)
+	}
+
 	writeJSON(w, http.StatusOK, items)
 }
 
