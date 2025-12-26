@@ -1,0 +1,18 @@
+/* global.css — минимальный reset, чтобы приложение занимало весь экран */
+
+html, body, #root {
+  height: 100%;
+  width: 100%;
+  margin: 0;
+}
+
+body {
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* Частый виновник "полоски": фиксированные контейнеры */
+#root {
+  max-width: none !important;
+  padding: 0 !important;
+}
