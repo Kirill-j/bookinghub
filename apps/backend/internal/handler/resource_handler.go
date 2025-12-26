@@ -26,10 +26,11 @@ func (h *ResourceHandler) List(w http.ResponseWriter, r *http.Request) {
 }
 
 type createResourceRequest struct {
-	CategoryID  uint64  `json:"categoryId"`
-	Title       string  `json:"title"`
-	Description *string `json:"description"`
-	Location    *string `json:"location"`
+	CategoryID   uint64  `json:"categoryId"`
+	Title        string  `json:"title"`
+	Description  *string `json:"description"`
+	Location     *string `json:"location"`
+	PricePerHour int     `json:"pricePerHour"`
 }
 
 func (h *ResourceHandler) Create(w http.ResponseWriter, r *http.Request) {
@@ -49,7 +50,19 @@ func (h *ResourceHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id, err := h.repo.Create(r.Context(), req.CategoryID, req.Title, req.Description, req.Location)
+	if req.PricePerHour < 0 {
+		http.Error(w, "pricePerHour must be >= 0", http.StatusBadRequest)
+		return
+	}
+
+	id, err := h.repo.Create(
+		r.Context(),
+		req.CategoryID,
+		req.Title,
+		req.Description,
+		req.Location,
+		req.PricePerHour,
+	)
 	if err != nil {
 		http.Error(w, "failed to create resource: "+err.Error(), http.StatusInternalServerError)
 		return

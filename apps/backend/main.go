@@ -14,6 +14,7 @@ import (
 	"github.com/jmoiron/sqlx"
 	"github.com/joho/godotenv"
 
+	"bookinghub-backend/internal/db"
 	"bookinghub-backend/internal/domain"
 	"bookinghub-backend/internal/handler"
 	"bookinghub-backend/internal/repo"
@@ -43,23 +44,27 @@ func main() {
 		dbUser, dbPass, dbHost, dbPort, dbName,
 	)
 
-	db, err := sqlx.Open("mysql", dsn)
+	dbx, err := sqlx.Open("mysql", dsn)
 	if err != nil {
 		log.Fatalf("db open error: %v", err)
 	}
-	db.SetMaxOpenConns(10)
-	db.SetMaxIdleConns(5)
-	db.SetConnMaxLifetime(30 * time.Minute)
+	dbx.SetMaxOpenConns(10)
+	dbx.SetMaxIdleConns(5)
+	dbx.SetConnMaxLifetime(30 * time.Minute)
 
-	app := &App{DB: db}
+	if err := db.ApplyMigrations(dbx.DB, "./migrations"); err != nil {
+		log.Fatalf("failed to apply migrations: %v", err)
+	}
 
-	resourceRepo := repo.NewResourceRepo(db)
+	app := &App{DB: dbx}
+
+	resourceRepo := repo.NewResourceRepo(dbx)
 	resourceHandler := handler.NewResourceHandler(resourceRepo)
-	categoryRepo := repo.NewCategoryRepo(db)
+	categoryRepo := repo.NewCategoryRepo(dbx)
 	categoryHandler := handler.NewCategoryHandler(categoryRepo)
-	userRepo := repo.NewUserRepo(db)
+	userRepo := repo.NewUserRepo(dbx)
 	authHandler := handler.NewAuthHandler(userRepo, authSvc)
-	bookingRepo := repo.NewBookingRepo(db)
+	bookingRepo := repo.NewBookingRepo(dbx)
 	bookingSvc := service.NewBookingService(bookingRepo)
 	bookingHandler := handler.NewBookingHandler(bookingRepo, bookingSvc)
 	resourceBookingsHandler := handler.NewResourceBookingsHandler(bookingRepo)
