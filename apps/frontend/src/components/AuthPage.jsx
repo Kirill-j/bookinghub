@@ -88,9 +88,9 @@ export default function AuthPage({
               <div className="auth-hint">
                 <div className="hint-title">Тестовые аккаунты</div>
                 <div className="hint-list">
-                  <div><b>admin@bookinghub.local</b> / 123456</div>
-                  <div><b>manager@bookinghub.local</b> / 123456</div>
-                  <div><b>user@bookinghub.local</b> / 123456</div>
+                  <div><b>admin@bookinghub.local</b> / 123456 (Админ)</div>
+                  <div><b>manager@bookinghub.local</b> / 123456 (Компания)</div>
+                  <div><b>user@bookinghub.local</b> / 123456 (Частное лицо)</div>
                 </div>
               </div>
             </form>
@@ -117,6 +117,26 @@ export default function AuthPage({
                   autoComplete="email"
                 />
               </label>
+
+              <div className="field">
+                <span className="label">Тип аккаунта</span>
+                <div className="auth-tabs" style={{ marginTop: 8 }}>
+                  <button
+                    type="button"
+                    className={`tab ${registerForm.accountType === 'INDIVIDUAL' ? 'tab-active' : ''}`}
+                    onClick={() => setRegisterForm({ ...registerForm, accountType: 'INDIVIDUAL' })}
+                  >
+                    Частное лицо
+                  </button>
+                  <button
+                    type="button"
+                    className={`tab ${registerForm.accountType === 'COMPANY' ? 'tab-active' : ''}`}
+                    onClick={() => setRegisterForm({ ...registerForm, accountType: 'COMPANY' })}
+                  >
+                    Компания
+                  </button>
+                </div>
+              </div>
 
               <label className="field">
                 <span className="label">Пароль</span>
