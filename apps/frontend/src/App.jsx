@@ -25,6 +25,28 @@ async function apiJson(path, opts = {}, token) {
   return r.json()
 }
 
+function pad2(n) {
+  return String(n).padStart(2, '0')
+}
+
+function toTimeHHMM(value) {
+  // value может быть строкой или датой
+  const d = new Date(value)
+  if (Number.isNaN(d.getTime())) return String(value)
+  return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`
+}
+
+function hhmmToMinutes(hhmm) {
+  const [h, m] = hhmm.split(':').map(Number)
+  return h * 60 + m
+}
+
+function minutesToHHMM(min) {
+  const h = Math.floor(min / 60)
+  const m = min % 60
+  return `${pad2(h)}:${pad2(m)}`
+}
+
 export default function App() {
   const [serverStatus, setServerStatus] = useState('загрузка...')
   const [error, setError] = useState('')
@@ -60,6 +82,8 @@ export default function App() {
     start: '10:00',
     end: '11:00',
   })
+
+  const [bookingDurationMin, setBookingDurationMin] = useState(60)
 
   const categoryNameById = useMemo(() => {
     const m = new Map()
@@ -116,6 +140,10 @@ export default function App() {
     const url = `/api/resources/${resourceId}/bookings?from=${date}&to=${date}`
     const items = await apiJson(url, {}, token)
     setResourceBookings(Array.isArray(items) ? items : [])
+  }
+
+  function overlaps(aStart, aEnd, bStart, bEnd) {
+    return aStart < bEnd && aEnd > bStart
   }
 
   const loadPending = async (t) => {
@@ -249,6 +277,10 @@ export default function App() {
     if (!bookingForm.resourceId) return setError('Выберите ресурс')
     if (!bookingForm.date) return setError('Выберите дату')
 
+    if (hhmmToMinutes(bookingForm.end) <= hhmmToMinutes(bookingForm.start)) {
+      return setError('Время окончания должно быть позже времени начала')
+    }
+
     const startAt = `${bookingForm.date}T${bookingForm.start}:00`
     const endAt = `${bookingForm.date}T${bookingForm.end}:00`
 
@@ -284,6 +316,53 @@ export default function App() {
     } catch (e) {
       setError(String(e.message || e))
     }
+  }
+
+  const pickFreeSlot = () => {
+    setError('')
+
+    if (!bookingForm.date) return setError('Сначала выберите дату')
+    if (!bookingForm.resourceId) return setError('Сначала выберите ресурс')
+
+    const duration = Number(bookingDurationMin) || 60
+
+    // Рабочее окно: 08:00–20:00 (можешь поменять)
+    const dayStart = 8 * 60
+    const dayEnd = 20 * 60
+
+    // Список занятых интервалов в минутах от начала дня
+    const busy = (Array.isArray(resourceBookings) ? resourceBookings : [])
+      .map((b) => {
+        const s = new Date(b.startAt)
+        const e = new Date(b.endAt)
+        if (Number.isNaN(s.getTime()) || Number.isNaN(e.getTime())) return null
+        return {
+          start: s.getHours() * 60 + s.getMinutes(),
+          end: e.getHours() * 60 + e.getMinutes(),
+        }
+      })
+      .filter(Boolean)
+
+    // Ищем слот шагом 15 минут
+    for (let t = dayStart; t + duration <= dayEnd; t += 15) {
+      const candidateStart = t
+      const candidateEnd = t + duration
+
+      const hasConflict = busy.some((x) =>
+        overlaps(candidateStart, candidateEnd, x.start, x.end)
+      )
+
+      if (!hasConflict) {
+        setBookingForm((f) => ({
+          ...f,
+          start: minutesToHHMM(candidateStart),
+          end: minutesToHHMM(candidateEnd),
+        }))
+        return
+      }
+    }
+
+    setError('На выбранную дату нет свободного окна в рабочее время')
   }
 
   return (
@@ -435,6 +514,22 @@ export default function App() {
               />
             </label>
 
+            <label>
+              Длительность (мин):
+              <input
+                type="number"
+                min="30"
+                step="15"
+                value={bookingDurationMin}
+                onChange={(e) => setBookingDurationMin(e.target.value)}
+                style={{ marginLeft: 8, width: 90 }}
+              />
+            </label>
+
+            <button type="button" onClick={pickFreeSlot}>
+              Подобрать свободное время
+            </button>
+
             <button type="submit">Забронировать</button>
             <div style={{ fontSize: 12, opacity: 0.75 }}>
               Правило: минимум 30 минут. Отмена — не позднее чем за 2 часа до начала.
@@ -449,7 +544,7 @@ export default function App() {
                 <ul>
                   {resourceBookings.map((b) => (
                     <li key={b.id}>
-                      {String(b.startAt)} → {String(b.endAt)} — {b.status}
+                      {toTimeHHMM(b.startAt)}–{toTimeHHMM(b.endAt)} — {b.status}
                     </li>
                   ))}
                 </ul>
