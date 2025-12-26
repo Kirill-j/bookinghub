@@ -32,6 +32,15 @@ export default function App() {
     password: '123456',
   })
 
+  const [authMode, setAuthMode] = useState('login') // 'login' | 'register'
+
+  const [registerForm, setRegisterForm] = useState({
+    name: '',
+    email: '',
+    password: '',
+    password2: '',
+  })
+
   const [resourceForm, setResourceForm] = useState({
     categoryId: '',
     title: '',
@@ -164,6 +173,58 @@ export default function App() {
     }
   }
 
+  const onRegister = async (e) => {
+    e.preventDefault()
+    setError('')
+
+    const name = registerForm.name.trim()
+    const email = registerForm.email.trim().toLowerCase()
+    const password = registerForm.password
+    const password2 = registerForm.password2
+
+    if (!name) return setError('Введите имя')
+    if (!email) return setError('Введите email')
+    if (!password || password.length < 6) return setError('Пароль должен быть минимум 6 символов')
+    if (password !== password2) return setError('Пароли не совпадают')
+
+    try {
+      // 1) регистрация
+      await apiJson(
+        '/api/auth/register',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, email, password }),
+        },
+        ''
+      )
+
+      // 2) авто-логин после регистрации
+      const data = await apiJson(
+        '/api/auth/login',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password }),
+        },
+        ''
+      )
+
+      const t = data.accessToken
+      saveToken(t)
+      setTokenState(t)
+
+      await loadMe(t)
+      await loadMyBookings(t)
+      await loadPending(t)
+
+      // очистим форму
+      setRegisterForm({ name: '', email: '', password: '', password2: '' })
+    } catch (e) {
+      setError(String(e.message || e))
+    }
+  }
+
   const onLogout = async () => {
     saveToken('')
     setTokenState('')
@@ -287,9 +348,14 @@ export default function App() {
       <AuthPage
         serverStatus={serverStatus}
         error={error}
+        mode={authMode}
+        setMode={setAuthMode}
         loginForm={loginForm}
         setLoginForm={setLoginForm}
         onLogin={onLogin}
+        registerForm={registerForm}
+        setRegisterForm={setRegisterForm}
+        onRegister={onRegister}
       />
     )
   }
