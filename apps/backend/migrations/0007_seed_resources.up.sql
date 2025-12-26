@@ -1,6 +1,7 @@
-INSERT INTO resources (category_id, title, description, location, price_per_hour, is_active)
-SELECT c.id, x.title, x.description, x.location, x.price_per_hour, TRUE
-FROM resource_categories c
+INSERT INTO resources (owner_user_id, category_id, title, description, location, price_per_hour, is_active)
+SELECT u.id, c.id, x.title, x.description, x.location, x.price_per_hour, TRUE
+FROM users u
+JOIN resource_categories c
 JOIN (
   SELECT 'Переговорная' AS cat, 'Переговорная А' AS title,
          'Небольшая переговорная до 6 человек' AS description,
@@ -22,8 +23,10 @@ JOIN (
          'FullHD проектор для презентаций',
          'Склад', 150
 ) x ON x.cat = c.name
+WHERE u.email = 'admin@bookinghub.local'
 ON DUPLICATE KEY UPDATE
   description = VALUES(description),
   location = VALUES(location),
   price_per_hour = VALUES(price_per_hour),
-  is_active = VALUES(is_active);
+  is_active = VALUES(is_active),
+  owner_user_id = VALUES(owner_user_id);

@@ -33,6 +33,22 @@ type createResourceRequest struct {
 	PricePerHour int     `json:"pricePerHour"`
 }
 
+func (h *ResourceHandler) My(w http.ResponseWriter, r *http.Request) {
+	ownerID := GetUserID(r)
+	if ownerID == 0 {
+		http.Error(w, "Требуется авторизация", http.StatusUnauthorized)
+		return
+	}
+
+	items, err := h.repo.ListByOwner(r.Context(), ownerID)
+	if err != nil {
+		http.Error(w, "failed to list my resources: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	writeJSON(w, http.StatusOK, items)
+}
+
 func (h *ResourceHandler) Create(w http.ResponseWriter, r *http.Request) {
 	var req createResourceRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -55,8 +71,15 @@ func (h *ResourceHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	ownerID := GetUserID(r)
+	if ownerID == 0 {
+		http.Error(w, "Требуется авторизация", http.StatusUnauthorized)
+		return
+	}
+
 	id, err := h.repo.Create(
 		r.Context(),
+		ownerID,
 		req.CategoryID,
 		req.Title,
 		req.Description,

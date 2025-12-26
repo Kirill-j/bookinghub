@@ -5,9 +5,9 @@ import "time"
 type UserRole string
 
 const (
-	RoleUser    UserRole = "USER"
-	RoleManager UserRole = "MANAGER"
-	RoleAdmin   UserRole = "ADMIN"
+	RoleIndividual UserRole = "INDIVIDUAL" // частное лицо
+	RoleCompany    UserRole = "COMPANY"    // компания
+	RoleAdmin      UserRole = "ADMIN"
 )
 
 type User struct {

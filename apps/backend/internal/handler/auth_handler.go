@@ -21,9 +21,10 @@ func NewAuthHandler(users *repo.UserRepo, auth *service.AuthService) *AuthHandle
 }
 
 type registerReq struct {
-	Email    string `json:"email"`
-	Name     string `json:"name"`
-	Password string `json:"password"`
+	Email       string `json:"email"`
+	Name        string `json:"name"`
+	Password    string `json:"password"`
+	AccountType string `json:"accountType"`
 }
 
 func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
@@ -66,13 +67,24 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id, err := h.users.Create(r.Context(), req.Email, req.Name, domain.RoleUser, hash)
+	role := domain.RoleIndividual
+	switch strings.ToUpper(strings.TrimSpace(req.AccountType)) {
+	case "INDIVIDUAL", "":
+		role = domain.RoleIndividual
+	case "COMPANY":
+		role = domain.RoleCompany
+	default:
+		http.Error(w, "Некорректный тип аккаунта (accountType)", http.StatusBadRequest)
+		return
+	}
+
+	id, err := h.users.Create(r.Context(), req.Email, req.Name, role, hash)
 	if err != nil {
 		http.Error(w, "Не удалось создать пользователя: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	token, err := h.auth.CreateAccessToken(id, domain.RoleUser)
+	token, err := h.auth.CreateAccessToken(id, role)
 	if err != nil {
 		http.Error(w, "Не удалось создать токен", http.StatusInternalServerError)
 		return
@@ -84,7 +96,7 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 			"id":    id,
 			"email": req.Email,
 			"name":  req.Name,
-			"role":  domain.RoleUser,
+			"role":  role,
 		},
 	})
 }

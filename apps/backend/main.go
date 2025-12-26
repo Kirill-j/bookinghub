@@ -87,11 +87,8 @@ func main() {
 
 		r.Get("/resources", resourceHandler.List)
 
-		// Создание ресурса — только MANAGER/ADMIN, и только для авторизованных
-		r.With(
-			handler.AuthMiddleware(authSvc),
-			handler.RequireRoles(domain.RoleManager, domain.RoleAdmin),
-		).Post("/resources", resourceHandler.Create)
+		// Создание ресурса — только для авторизованных
+		r.With(handler.AuthMiddleware(authSvc)).Post("/resources", resourceHandler.Create)
 
 		r.Route("/auth", func(r chi.Router) {
 			r.Post("/register", authHandler.Register)
@@ -106,19 +103,20 @@ func main() {
 		r.With(handler.AuthMiddleware(authSvc)).Post("/bookings", bookingHandler.Create)
 
 		// Менеджер: смотреть ожидающие и менять статус
-		r.With(
-			handler.AuthMiddleware(authSvc),
-			handler.RequireRoles(domain.RoleManager, domain.RoleAdmin),
-		).Get("/bookings/pending", bookingHandler.Pending)
+		r.With(handler.AuthMiddleware(authSvc)).Get("/bookings/pending", bookingHandler.Pending)
 
-		r.With(
-			handler.AuthMiddleware(authSvc),
-			handler.RequireRoles(domain.RoleManager, domain.RoleAdmin),
-		).Patch("/bookings/{id}/status", bookingHandler.UpdateStatus)
+		r.With(handler.AuthMiddleware(authSvc)).Patch("/bookings/{id}/status", bookingHandler.UpdateStatus)
 
 		r.With(handler.AuthMiddleware(authSvc)).Post("/bookings/{id}/cancel", bookingHandler.Cancel)
 
 		r.Get("/resources/{id}/bookings", resourceBookingsHandler.List)
+
+		r.With(handler.AuthMiddleware(authSvc)).Get("/resources/my", resourceHandler.My)
+
+		r.With(
+			handler.AuthMiddleware(authSvc),
+			handler.RequireRoles(domain.RoleAdmin),
+		).Post("/categories", categoryHandler.Create)
 	})
 
 	r.Get("/db/ping", app.handleDBPing)
