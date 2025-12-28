@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { apiJson } from '../api/client'
+import { apiJson, saveToken } from '../api/client'
 
 function rub(n) {
   const v = Number(n) || 0
@@ -46,7 +46,14 @@ export default function ProfilePage({ token, me, categories, resources, onMeUpda
     return m
   }, [categories])
 
-  const load = async () => {
+  const resourceTitleById = useMemo(() => {
+    const m = new Map()
+    for (const r of (resources || [])) m.set(String(r.id), r.title)
+    for (const r of (myResources || [])) m.set(String(r.id), r.title)
+    return m
+  }, [resources, myResources])
+
+  const loadSummary = async () => {
     setError('')
     try {
       const [res, bookings] = await Promise.all([
