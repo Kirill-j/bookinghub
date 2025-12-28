@@ -16,7 +16,6 @@ export default function AppShell({ me, onLogout, children }) {
           <div className="topbar-right">
             <div className="topbar-nav">
               <Link className="nav-link" to="/">Каталог</Link>
-              <Link className="nav-link" to="/new">Разместить</Link>
               <Link className="nav-link" to="/profile">Профиль</Link>
             </div>
 

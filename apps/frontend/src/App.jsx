@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { BrowserRouter, Routes, Route, useNavigate, useParams } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, useNavigate, useParams } from 'react-router-dom'
 
 import { apiJson, apiText, getToken, saveToken } from './api/client'
 
@@ -9,6 +9,11 @@ import HomePage from './pages/HomePage'
 import ResourcePage from './pages/ResourcePage'
 import NewListingPage from './pages/NewListingPage'
 import ProfilePage from './pages/ProfilePage'
+import ProfileLayout from './pages/ProfileLayout'
+import ProfileMyListings from './pages/profile/ProfileMyListings'
+import ProfilePending from './pages/profile/ProfilePending'
+import ProfileMyBookings from './pages/profile/ProfileMyBookings'
+import ProfileNewListing from './pages/profile/ProfileNewListing'
 
 
 function HomeRoute(props) {
@@ -232,16 +237,39 @@ export default function App() {
             }
           />
 
-          <Route
-            path="/profile"
-            element={
-              <ProfilePage
-                token={token}
-                me={me}
-                categories={categories}
-              />
-            }
-          />
+          <Route path="/profile" element={<ProfileLayout me={me} />}>
+            <Route
+              index
+              element={
+                <ProfilePage
+                  token={token}
+                  me={me}
+                  categories={categories}
+                  resources={resources}
+                  onMeUpdated={(u) => setMe(u)}
+                />
+              }
+            />
+
+            <Route path="listings" element={<ProfileMyListings token={token} categories={categories} />} />
+            <Route path="pending" element={<ProfilePending token={token} resources={resources} />} />
+            <Route path="bookings" element={<ProfileMyBookings token={token} resources={resources} />} />
+            <Route
+              path="new"
+              element={
+                <ProfileNewListing
+                  token={token}
+                  categories={categories}
+                  onCreated={async () => {
+                    const fresh = await apiJson('/api/resources', {}, token)
+                    setResources(Array.isArray(fresh) ? fresh : [])
+                  }}
+                />
+              }
+            />
+
+            <Route path="*" element={<Navigate to="." replace />} />
+          </Route>
         </Routes>
       </AppShell>
     </BrowserRouter>
