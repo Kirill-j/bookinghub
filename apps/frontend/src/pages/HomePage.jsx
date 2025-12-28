@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import Select from '../components/ui/Select'
 
 function rub(n) {
   const v = Number(n) || 0
@@ -47,6 +48,22 @@ export default function HomePage({ categories, resources, onOpenResource }) {
     return list
   }, [resources, q, catId, sort, minPrice, maxPrice])
 
+  const categoryOptions = useMemo(() => {
+  const base = [{ value: 'all', label: 'Все категории' }]
+  const rest = (Array.isArray(categories) ? categories : []).map((c) => ({
+    value: String(c.id),
+    label: c.name,
+  }))
+  return base.concat(rest)
+}, [categories])
+
+const sortOptions = useMemo(() => ([
+  { value: 'popular', label: 'Сначала актуальные' },
+  { value: 'price_asc', label: 'Цена: по возрастанию' },
+  { value: 'price_desc', label: 'Цена: по убыванию' },
+]), [])
+
+
   return (
     <div>
       <div className="catalog-head">
@@ -62,18 +79,17 @@ export default function HomePage({ categories, resources, onOpenResource }) {
           onChange={(e) => setQ(e.target.value)}
         />
 
-        <select className="select-ui" value={catId} onChange={(e) => setCatId(e.target.value)}>
-          <option value="all">Все категории</option>
-          {categories.map((c) => (
-            <option key={c.id} value={String(c.id)}>{c.name}</option>
-          ))}
-        </select>
+        <Select
+          value={catId}
+          onChange={(v) => setCatId(String(v))}
+          options={categoryOptions}
+        />
 
-        <select className="select-ui" value={sort} onChange={(e) => setSort(e.target.value)}>
-          <option value="popular">Сначала актуальные</option>
-          <option value="price_asc">Цена: по возрастанию</option>
-          <option value="price_desc">Цена: по убыванию</option>
-        </select>
+        <Select
+          value={sort}
+          onChange={(v) => setSort(String(v))}
+          options={sortOptions}
+        />
 
         <input
           className="input-ui"

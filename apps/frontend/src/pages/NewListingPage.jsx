@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { apiJson } from '../api/client'
+import Select from '../components/ui/Select'
 
 export default function NewListingPage({ token, categories, onCreated }) {
   const [error, setError] = useState('')
@@ -61,6 +62,13 @@ export default function NewListingPage({ token, categories, onCreated }) {
     }
   }
 
+  const categoryOptions = useMemo(() => {
+    return (Array.isArray(categories) ? categories : []).map((c) => ({
+      value: String(c.id),
+      label: c.name,
+    }))
+  }, [categories])
+
   return (
     <div>
       <h2 style={{ margin: '8px 0 12px' }}>Разместить объявление</h2>
@@ -72,15 +80,11 @@ export default function NewListingPage({ token, categories, onCreated }) {
         <form onSubmit={submit} className="form-col">
           <label className="field-ui">
             <span className="label-ui">Категория</span>
-            <select
-              className="select-ui"
+            <Select
               value={form.categoryId}
-              onChange={(e) => setForm({ ...form, categoryId: e.target.value })}
-            >
-              {categories.map((c) => (
-                <option key={c.id} value={String(c.id)}>{c.name}</option>
-              ))}
-            </select>
+              onChange={(v) => setForm({ ...form, categoryId: String(v) })}
+              options={categoryOptions}
+            />
           </label>
 
           <label className="field-ui">
