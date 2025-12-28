@@ -1,5 +1,13 @@
 /* app.css — оформление основной части приложения */
 
+/* ВАЖНО: чтобы 100% не вылезало из-за padding/border */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+.card, .form-col, .field-ui, .form-row { min-width: 0; }
+.app-bg .input-ui, .app-bg .select-ui, .app-bg .textarea-ui { min-width: 0; }
+
 .app-bg {
   min-height: 100vh;
   width: 100%;
@@ -256,4 +264,120 @@
   border-radius: 14px;
   border: 1px solid rgba(255,255,255,0.10);
   background: rgba(255,255,255,0.05);
+}
+
+.app-bg .input-ui,
+.app-bg .select-ui,
+.app-bg .textarea-ui {
+  width: 100%;
+  border-radius: 12px;
+  padding: 10px 12px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.06);
+  color: inherit;
+  outline: none;
+}
+
+.app-bg .select-ui {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  line-height: 1.2;
+}
+
+/* ===== Custom Select (Select.jsx) ===== */
+.selectx { position: relative; width: 100%; min-width: 0; }
+
+.selectx-btn{
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.06);
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.selectx-btn:hover { border-color: rgba(255,255,255,0.18); filter: brightness(1.03); }
+
+.selectx-value { font-weight: 800; font-size: 13px; }
+.selectx-caret { opacity: 0.85; transition: transform .15s ease; }
+.selectx-caret-up { transform: rotate(180deg); }
+
+.selectx-menu{
+  position: absolute;
+  z-index: 50;
+  left: 0;
+  right: 0;
+  top: calc(100% + 8px);
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(15, 20, 35, 0.92);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 18px 60px rgba(0,0,0,0.35);
+  padding: 6px;
+}
+
+.selectx-item{
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: rgba(232,234,243,0.92);
+  padding: 10px 10px;
+  border-radius: 12px;
+  cursor: pointer;
+  text-align: left;
+  font-weight: 800;
+  font-size: 13px;
+}
+
+.selectx-item:hover{
+  background: rgba(255,255,255,0.08);
+}
+
+.selectx-item-active{
+  background: rgba(99,102,241,0.18);
+  border: 1px solid rgba(99,102,241,0.25);
+}
+
+.profile-grid{
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+  margin-top: 12px;
+}
+
+@media (min-width: 900px){
+  .profile-grid{
+    grid-template-columns: 320px 1fr;
+    align-items: start;
+  }
+}
+
+.profile-menu-title{
+  font-weight: 900;
+  margin-bottom: 10px;
+}
+
+.profile-link{
+  display: block;
+  padding: 10px 12px;
+  border-radius: 12px;
+  text-decoration: none;
+  color: rgba(232,234,243,0.92);
+  border: 1px solid rgba(255,255,255,0.10);
+  background: rgba(255,255,255,0.05);
+  font-weight: 800;
+  margin-bottom: 10px;
+}
+
+.profile-link:hover{ filter: brightness(1.05); }
+.profile-link.active{
+  background: rgba(99,102,241,0.18);
+  border-color: rgba(99,102,241,0.25);
 }
