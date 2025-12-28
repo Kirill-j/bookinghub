@@ -175,3 +175,131 @@ func (h *AuthHandler) Me(w http.ResponseWriter, r *http.Request) {
 		"role":  u.Role,
 	})
 }
+
+type updateMeReq struct {
+	Email string `json:"email"`
+	Name  string `json:"name"`
+}
+
+func (h *AuthHandler) UpdateMe(w http.ResponseWriter, r *http.Request) {
+	uid := GetUserID(r)
+	if uid == 0 {
+		http.Error(w, "Требуется авторизация", http.StatusUnauthorized)
+		return
+	}
+
+	var req updateMeReq
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Некорректный JSON", http.StatusBadRequest)
+		return
+	}
+
+	email := strings.TrimSpace(strings.ToLower(req.Email))
+	name := strings.TrimSpace(req.Name)
+
+	if email == "" || !strings.Contains(email, "@") {
+		http.Error(w, "Введите корректный email", http.StatusBadRequest)
+		return
+	}
+	if name == "" {
+		http.Error(w, "Имя обязательно", http.StatusBadRequest)
+		return
+	}
+
+	// текущий пользователь
+	u, err := h.users.GetByID(r.Context(), uid)
+	if err != nil {
+		http.Error(w, "Пользователь не найден", http.StatusUnauthorized)
+		return
+	}
+
+	// если меняем email — проверим уникальность
+	if email != u.Email {
+		existing, err := h.users.GetByEmail(r.Context(), email)
+		if err == nil && existing != nil {
+			http.Error(w, "Email уже занят", http.StatusConflict)
+			return
+		}
+		if err != nil && err != sql.ErrNoRows {
+			http.Error(w, "Ошибка базы данных: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+
+	if err := h.users.UpdateProfile(r.Context(), uid, email, name); err != nil {
+		http.Error(w, "Не удалось обновить профиль: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// отдадим обновлённого пользователя
+	u2, _ := h.users.GetByID(r.Context(), uid)
+	writeJSON(w, http.StatusOK, map[string]any{
+		"id":    u2.ID,
+		"email": u2.Email,
+		"name":  u2.Name,
+		"role":  u2.Role,
+	})
+}
+
+type changePasswordReq struct {
+	CurrentPassword string `json:"currentPassword"`
+	NewPassword     string `json:"newPassword"`
+}
+
+func (h *AuthHandler) ChangePassword(w http.ResponseWriter, r *http.Request) {
+	uid := GetUserID(r)
+	if uid == 0 {
+		http.Error(w, "Требуется авторизация", http.StatusUnauthorized)
+		return
+	}
+
+	var req changePasswordReq
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Некорректный JSON", http.StatusBadRequest)
+		return
+	}
+
+	if len(req.NewPassword) < 6 {
+		http.Error(w, "Новый пароль должен быть минимум 6 символов", http.StatusBadRequest)
+		return
+	}
+
+	u, err := h.users.GetByID(r.Context(), uid)
+	if err != nil {
+		http.Error(w, "Пользователь не найден", http.StatusUnauthorized)
+		return
+	}
+
+	if err := h.auth.CheckPassword(u.PasswordHash, req.CurrentPassword); err != nil {
+		http.Error(w, "Текущий пароль неверный", http.StatusUnauthorized)
+		return
+	}
+
+	hash, err := h.auth.HashPassword(req.NewPassword)
+	if err != nil {
+		http.Error(w, "Не удалось обработать пароль", http.StatusInternalServerError)
+		return
+	}
+
+	if err := h.users.UpdatePasswordHashByID(r.Context(), uid, hash); err != nil {
+		http.Error(w, "Не удалось обновить пароль: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
+}
+
+func (h *AuthHandler) DeleteMe(w http.ResponseWriter, r *http.Request) {
+	uid := GetUserID(r)
+	if uid == 0 {
+		http.Error(w, "Требуется авторизация", http.StatusUnauthorized)
+		return
+	}
+
+	if err := h.users.DeleteAccount(r.Context(), uid); err != nil {
+		http.Error(w, "Не удалось удалить аккаунт: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
+}

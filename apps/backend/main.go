@@ -66,7 +66,7 @@ func main() {
 	authHandler := handler.NewAuthHandler(userRepo, authSvc)
 	bookingRepo := repo.NewBookingRepo(dbx)
 	bookingSvc := service.NewBookingService(bookingRepo)
-	bookingHandler := handler.NewBookingHandler(bookingRepo, bookingSvc)
+	bookingHandler := handler.NewBookingHandler(bookingRepo, userRepo, bookingSvc)
 	resourceBookingsHandler := handler.NewResourceBookingsHandler(bookingRepo)
 
 	r := chi.NewRouter()
@@ -96,6 +96,9 @@ func main() {
 
 			// защищённый роут
 			r.With(handler.AuthMiddleware(authSvc)).Get("/me", authHandler.Me)
+			r.With(handler.AuthMiddleware(authSvc)).Patch("/me", authHandler.UpdateMe)
+			r.With(handler.AuthMiddleware(authSvc)).Post("/password", authHandler.ChangePassword)
+			r.With(handler.AuthMiddleware(authSvc)).Delete("/me", authHandler.DeleteMe)
 		})
 
 		// Бронирования: только авторизованные
