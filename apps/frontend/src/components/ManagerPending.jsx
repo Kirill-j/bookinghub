@@ -1,22 +1,49 @@
-export default function MyBookings({ me, myBookings, onCancelBooking }) {
-  if (!me) return null
+export default function ManagerPending({
+  me,
+  pendingBookings,
+  managerComment,
+  setManagerComment,
+  loadPending,
+  updateBookingStatus,
+  token,
+}) {
+  const isManager = me && (me.role === 'MANAGER' || me.role === 'ADMIN')
+  if (!isManager) return null
 
   return (
-    <div style={{ padding: 12, border: '1px solid #ddd', marginBottom: 16 }}>
-      <h2 style={{ marginTop: 0 }}>Мои бронирования</h2>
+    <div>
+      <h2 style={{ marginTop: 0 }}>Заявки на бронирование</h2>
 
-      {(myBookings?.length || 0) === 0 ? (
-        <div style={{ opacity: 0.75 }}>Пока нет бронирований</div>
+      <div style={{ display: 'grid', gap: 8, marginBottom: 10 }}>
+        <label>
+          Комментарий менеджера (необязательно):
+          <input
+            value={managerComment}
+            onChange={(e) => setManagerComment(e.target.value)}
+            placeholder="Например: подтверждено / занято / не подходит время"
+            style={{ width: '100%' }}
+          />
+        </label>
+
+        <button onClick={() => loadPending(token)}>Обновить список</button>
+      </div>
+
+      {(pendingBookings?.length || 0) === 0 ? (
+        <div style={{ opacity: 0.75 }}>Нет заявок</div>
       ) : (
         <ul>
-          {myBookings.map((b) => (
-            <li key={b.id} style={{ marginBottom: 8 }}>
-              <b>#{b.id}</b> ресурс #{b.resourceId} — {String(b.startAt)} → {String(b.endAt)} — <b>{b.status}</b>{' '}
-              {(b.status === 'PENDING' || b.status === 'APPROVED') && (
-                <button style={{ marginLeft: 8 }} onClick={() => onCancelBooking(b.id)}>
-                  Отменить
+          {pendingBookings.map((b) => (
+            <li key={b.id} style={{ marginBottom: 10 }}>
+              <b>#{b.id}</b> — ресурс #{b.resourceId}, пользователь #{b.userId}
+              <div style={{ opacity: 0.75 }}>
+                {String(b.startAt)} → {String(b.endAt)}
+              </div>
+              <div style={{ marginTop: 6 }}>
+                <button onClick={() => updateBookingStatus(b.id, 'APPROVED')}>Подтвердить</button>
+                <button style={{ marginLeft: 8 }} onClick={() => updateBookingStatus(b.id, 'REJECTED')}>
+                  Отклонить
                 </button>
-              )}
+              </div>
             </li>
           ))}
         </ul>

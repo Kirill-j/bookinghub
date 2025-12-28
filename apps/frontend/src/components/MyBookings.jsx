@@ -2,7 +2,7 @@ export default function MyBookings({ me, myBookings, onCancelBooking }) {
   if (!me) return null
 
   return (
-    <div style={{ padding: 12, border: '1px solid #ddd', marginBottom: 16 }}>
+    <div>
       <h2 style={{ marginTop: 0 }}>Мои бронирования</h2>
 
       {(myBookings?.length || 0) === 0 ? (
