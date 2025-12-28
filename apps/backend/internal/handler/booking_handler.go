@@ -16,11 +16,12 @@ import (
 
 type BookingHandler struct {
 	repo    *repo.BookingRepo
+	users   *repo.UserRepo
 	service *service.BookingService
 }
 
-func NewBookingHandler(repo *repo.BookingRepo, service *service.BookingService) *BookingHandler {
-	return &BookingHandler{repo: repo, service: service}
+func NewBookingHandler(repo *repo.BookingRepo, users *repo.UserRepo, service *service.BookingService) *BookingHandler {
+	return &BookingHandler{repo: repo, users: users, service: service}
 }
 
 func (h *BookingHandler) My(w http.ResponseWriter, r *http.Request) {
@@ -97,7 +98,24 @@ func (h *BookingHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 // Менеджерская часть: список ожидающих
 func (h *BookingHandler) Pending(w http.ResponseWriter, r *http.Request) {
-	items, err := h.repo.ListPending(r.Context())
+	uid := GetUserID(r)
+	if uid == 0 {
+		http.Error(w, "Требуется авторизация", http.StatusUnauthorized)
+		return
+	}
+
+	role, err := h.users.GetRoleByID(r.Context(), uid)
+	if err != nil {
+		http.Error(w, "Ошибка базы данных", http.StatusInternalServerError)
+		return
+	}
+
+	var items []domain.Booking
+	if role == domain.RoleAdmin {
+		items, err = h.repo.ListPending(r.Context())
+	} else {
+		items, err = h.repo.ListPendingForOwner(r.Context(), uid)
+	}
 	if err != nil {
 		http.Error(w, "Не удалось получить список: "+err.Error(), http.StatusInternalServerError)
 		return
@@ -124,6 +142,32 @@ func (h *BookingHandler) UpdateStatus(w http.ResponseWriter, r *http.Request) {
 	id64, err := strconv.ParseUint(idStr, 10, 64)
 	if err != nil {
 		http.Error(w, "Некорректный id", http.StatusBadRequest)
+		return
+	}
+
+	uid := GetUserID(r)
+	if uid == 0 {
+		http.Error(w, "Требуется авторизация", http.StatusUnauthorized)
+		return
+	}
+
+	// owner ресурса по этой брони (ВАЖНО: передаём id64)
+	ownerID, err := h.repo.GetOwnerUserIDByBookingID(r.Context(), uint64(id64))
+	if err != nil {
+		http.Error(w, "Бронирование не найдено", http.StatusNotFound)
+		return
+	}
+
+	// роль текущего пользователя (из БД)
+	role, err := h.users.GetRoleByID(r.Context(), uid)
+	if err != nil {
+		http.Error(w, "Ошибка базы данных", http.StatusInternalServerError)
+		return
+	}
+
+	// admin может всё, остальные — только если владелец объявления
+	if role != domain.RoleAdmin && ownerID != uid {
+		http.Error(w, "Недостаточно прав: вы не владелец объявления", http.StatusForbidden)
 		return
 	}
 

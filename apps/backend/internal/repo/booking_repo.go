@@ -115,3 +115,27 @@ func (r *BookingRepo) ListByResourceBetween(ctx context.Context, resourceID uint
 	`, resourceID, from, to)
 	return items, err
 }
+
+func (r *BookingRepo) GetOwnerUserIDByBookingID(ctx context.Context, bookingID uint64) (uint64, error) {
+	var owner uint64
+	err := r.db.GetContext(ctx, &owner, `
+		SELECT r.owner_user_id
+		FROM bookings b
+		JOIN resources r ON r.id = b.resource_id
+		WHERE b.id = ?
+	`, bookingID)
+	return owner, err
+}
+
+func (r *BookingRepo) ListPendingForOwner(ctx context.Context, ownerUserID uint64) ([]domain.Booking, error) {
+	var items []domain.Booking
+	err := r.db.SelectContext(ctx, &items, `
+		SELECT b.id, b.resource_id, b.user_id, b.start_at, b.end_at, b.status, b.manager_comment, b.created_at, b.updated_at
+		FROM bookings b
+		JOIN resources r ON r.id = b.resource_id
+		WHERE b.status = 'PENDING'
+		  AND r.owner_user_id = ?
+		ORDER BY b.start_at ASC
+	`, ownerUserID)
+	return items, err
+}
