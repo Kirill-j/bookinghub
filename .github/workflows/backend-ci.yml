@@ -1,0 +1,39 @@
+name: Backend CI
+
+on:
+  push:
+    branches: [ "master", "main" ]
+  pull_request:
+    branches: [ "master", "main" ]
+
+jobs:
+  test-backend:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+
+      - name: Download dependencies
+        working-directory: apps/backend
+        run: go mod download
+
+      - name: Run tests with coverage
+        working-directory: apps/backend
+        run: go test ./... -coverprofile=coverage.out
+
+      - name: Show coverage
+        working-directory: apps/backend
+        run: go tool cover -func=coverage.out
+
+      - name: Enforce coverage >= 55%
+        working-directory: apps/backend
+        run: |
+          total=$(go tool cover -func=coverage.out | grep total: | awk '{print substr($3, 1, length($3)-1)}')
+          echo "Total coverage: $total%"
+          awk "BEGIN { exit !($total >= 55) }"
