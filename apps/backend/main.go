@@ -68,6 +68,7 @@ func main() {
 	bookingSvc := service.NewBookingService(bookingRepo)
 	bookingHandler := handler.NewBookingHandler(bookingRepo, userRepo, bookingSvc)
 	resourceBookingsHandler := handler.NewResourceBookingsHandler(bookingRepo)
+	userHandler := handler.NewUserHandler(userRepo)
 
 	r := chi.NewRouter()
 
@@ -86,6 +87,8 @@ func main() {
 		r.Get("/categories", categoryHandler.List)
 
 		r.Get("/resources", resourceHandler.List)
+
+		r.Get("/users/{id}", userHandler.PublicByID)
 
 		// Создание ресурса — только для авторизованных
 		r.With(handler.AuthMiddleware(authSvc)).Post("/resources", resourceHandler.Create)
