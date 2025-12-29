@@ -4,8 +4,7 @@ import (
 	"context"
 	"errors"
 	"time"
-
-	"bookinghub-backend/internal/repo"
+	// "bookinghub-backend/internal/repo"
 )
 
 var (
@@ -13,11 +12,16 @@ var (
 	ErrConflict    = errors.New("Выбранное время уже занято")
 )
 
-type BookingService struct {
-	repo *repo.BookingRepo
+type bookingRepo interface {
+	HasConflict(ctx context.Context, resourceID uint64, startAt, endAt time.Time) (bool, error)
+	Create(ctx context.Context, resourceID, userID uint64, startAt, endAt time.Time) (uint64, error)
 }
 
-func NewBookingService(repo *repo.BookingRepo) *BookingService {
+type BookingService struct {
+	repo bookingRepo
+}
+
+func NewBookingService(repo bookingRepo) *BookingService {
 	return &BookingService{repo: repo}
 }
 

@@ -13,3 +13,6 @@ apps/frontend/.env.local
 
 # IDE
 .vscode
+
+# Go coverage
+coverage.out

@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"strconv"
@@ -10,17 +11,31 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"bookinghub-backend/internal/domain"
-	"bookinghub-backend/internal/repo"
+	// "bookinghub-backend/internal/repo"
 	"bookinghub-backend/internal/service"
 )
 
+type bookingRepo interface {
+	ListByUser(ctx context.Context, userID uint64) ([]domain.Booking, error)
+	ListPending(ctx context.Context) ([]domain.Booking, error)
+	ListPendingForOwner(ctx context.Context, ownerID uint64) ([]domain.Booking, error)
+	GetOwnerUserIDByBookingID(ctx context.Context, bookingID uint64) (uint64, error)
+	GetByID(ctx context.Context, id uint64) (*domain.Booking, error)
+	UpdateStatus(ctx context.Context, id uint64, status domain.BookingStatus, managerComment *string) error
+	Cancel(ctx context.Context, id uint64) error
+}
+
+type userRepo interface {
+	GetRoleByID(ctx context.Context, uid uint64) (domain.UserRole, error)
+}
+
 type BookingHandler struct {
-	repo    *repo.BookingRepo
-	users   *repo.UserRepo
+	repo    bookingRepo
+	users   userRepo
 	service *service.BookingService
 }
 
-func NewBookingHandler(repo *repo.BookingRepo, users *repo.UserRepo, service *service.BookingService) *BookingHandler {
+func NewBookingHandler(repo bookingRepo, users userRepo, service *service.BookingService) *BookingHandler {
 	return &BookingHandler{repo: repo, users: users, service: service}
 }
 
