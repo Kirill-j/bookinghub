@@ -17,24 +17,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.22.12'
-          cache: true
-
-      - name: Verify Go toolchain
-        working-directory: apps/backend
-        run: |
-          which go
-          go version
-          go env GOROOT GOPATH GOTOOLCHAIN
-          go tool cover -V
-
-      # ВАЖНО: запрещаем автоскачивание нового toolchain (go1.25.x)
-      - name: Pin toolchain to local Go
-        working-directory: apps/backend
-        run: |
-          go env -w GOTOOLCHAIN=local
-          go env GOTOOLCHAIN
-          go version
+          go-version: '1.22'
 
       - name: Download dependencies
         working-directory: apps/backend
@@ -42,11 +25,7 @@ jobs:
 
       - name: Run tests with coverage
         working-directory: apps/backend
-        run: |
-          pkgs=$(go list ./... | grep -v '/cmd/hash' | grep -v '/internal/db')
-          echo "Testing packages:"
-          echo "$pkgs"
-          go test $pkgs -coverprofile=coverage.out
+        run: go test ./... -coverprofile=coverage.out
 
       - name: Show coverage
         working-directory: apps/backend
