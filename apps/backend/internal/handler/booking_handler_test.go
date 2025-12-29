@@ -3,6 +3,7 @@ package handler
 import (
 	"bytes"
 	"context"
+	"database/sql/driver"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -31,6 +32,20 @@ func newMockHandlerDB(t *testing.T) (*sqlx.DB, sqlmock.Sqlmock, func()) {
 func withUID(req *http.Request, uid uint64) *http.Request {
 	ctx := context.WithValue(req.Context(), ctxUserID, uid)
 	return req.WithContext(ctx)
+}
+
+// --- sqlmock helpers ---
+
+// timeEq matches time.Time arguments by value (t.Equal) rather than reflect.DeepEqual,
+// avoiding failures due to monotonic clock/representation differences.
+type timeEq struct{ want time.Time }
+
+func (m timeEq) Match(v driver.Value) bool {
+	t, ok := v.(time.Time)
+	if !ok {
+		return false
+	}
+	return t.UTC().Round(0).Equal(m.want.UTC().Round(0))
 }
 
 func TestBookingHandler_Create_BadJSON(t *testing.T) {
@@ -62,7 +77,8 @@ func TestBookingHandler_Create_Conflict(t *testing.T) {
 	svc := service.NewBookingService(bookingRepo)
 	h := NewBookingHandler(bookingRepo, userRepo, svc)
 
-	start := time.Now().Add(2 * time.Hour).Truncate(time.Second)
+	// fixed time for deterministic tests
+	start := time.Date(2025, 12, 29, 17, 47, 54, 0, time.UTC)
 	end := start.Add(time.Hour)
 
 	body, _ := json.Marshal(map[string]any{
@@ -79,7 +95,7 @@ func TestBookingHandler_Create_Conflict(t *testing.T) {
 		  AND status IN ('PENDING','APPROVED')
 		  AND (? < end_at) AND (? > start_at)
 	`)).
-		WithArgs(uint64(99), start, end).
+		WithArgs(uint64(99), timeEq{start}, timeEq{end}).
 		WillReturnRows(sqlmock.NewRows([]string{"COUNT(*)"}).AddRow(1))
 
 	req := httptest.NewRequest("POST", "/api/bookings", bytes.NewReader(body))
@@ -105,7 +121,8 @@ func TestBookingHandler_Create_OK(t *testing.T) {
 	svc := service.NewBookingService(bookingRepo)
 	h := NewBookingHandler(bookingRepo, userRepo, svc)
 
-	start := time.Now().Add(2 * time.Hour).Truncate(time.Second)
+	// fixed time for deterministic tests
+	start := time.Date(2025, 12, 29, 17, 47, 54, 0, time.UTC)
 	end := start.Add(time.Hour)
 
 	body, _ := json.Marshal(map[string]any{
@@ -122,7 +139,7 @@ func TestBookingHandler_Create_OK(t *testing.T) {
 		  AND status IN ('PENDING','APPROVED')
 		  AND (? < end_at) AND (? > start_at)
 	`)).
-		WithArgs(uint64(99), start, end).
+		WithArgs(uint64(99), timeEq{start}, timeEq{end}).
 		WillReturnRows(sqlmock.NewRows([]string{"COUNT(*)"}).AddRow(0))
 
 	// insert booking
@@ -130,7 +147,7 @@ func TestBookingHandler_Create_OK(t *testing.T) {
 		INSERT INTO bookings (resource_id, user_id, start_at, end_at, status)
 		VALUES (?, ?, ?, ?, 'PENDING')
 	`)).
-		WithArgs(uint64(99), uint64(7), start, end).
+		WithArgs(uint64(99), uint64(7), timeEq{start}, timeEq{end}).
 		WillReturnResult(sqlmock.NewResult(555, 1))
 
 	req := httptest.NewRequest("POST", "/api/bookings", bytes.NewReader(body))
@@ -167,7 +184,7 @@ func TestBookingHandler_Pending_Admin(t *testing.T) {
 		WillReturnRows(sqlmock.NewRows([]string{"role"}).AddRow(string(domain.RoleAdmin)))
 
 	// ListPending
-	now := time.Now()
+	now := time.Date(2025, 12, 29, 12, 0, 0, 0, time.UTC)
 	mock.ExpectQuery(regexp.QuoteMeta(`
 		SELECT id, resource_id, user_id, start_at, end_at, status, manager_comment, created_at, updated_at
 		FROM bookings
