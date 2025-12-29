@@ -123,6 +123,16 @@ func main() {
 			handler.AuthMiddleware(authSvc),
 			handler.RequireRoles(domain.RoleAdmin),
 		).Post("/categories", categoryHandler.Create)
+
+		r.With(
+			handler.AuthMiddleware(authSvc),
+			handler.RequireRoles(domain.RoleAdmin),
+		).Patch("/categories/{id}", categoryHandler.Update)
+
+		r.With(
+			handler.AuthMiddleware(authSvc),
+			handler.RequireRoles(domain.RoleAdmin),
+		).Delete("/categories/{id}", categoryHandler.Delete)
 	})
 
 	r.Get("/db/ping", app.handleDBPing)

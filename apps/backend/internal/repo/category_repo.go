@@ -36,3 +36,17 @@ func (r *CategoryRepo) Create(ctx context.Context, name string) (uint64, error) 
 	id, err := res.LastInsertId()
 	return uint64(id), err
 }
+
+func (r *CategoryRepo) Update(ctx context.Context, id uint64, name string) error {
+	_, err := r.db.ExecContext(ctx, `
+		UPDATE resource_categories
+		SET name = ?
+		WHERE id = ?
+	`, name, id)
+	return err
+}
+
+func (r *CategoryRepo) Delete(ctx context.Context, id uint64) error {
+	_, err := r.db.ExecContext(ctx, `DELETE FROM resource_categories WHERE id = ?`, id)
+	return err
+}
