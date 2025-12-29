@@ -1,0 +1,94 @@
+### Health
+GET http://localhost:8080/api/health
+
+### DB ping
+GET http://localhost:8080/db/ping
+
+### Categories
+GET http://localhost:8080/api/categories
+
+### Resources
+GET http://localhost:8080/api/resources
+
+### Login as admin (seed user)
+POST http://localhost:8080/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@bookinghub.local",
+  "password": "123456"
+}
+
+### Login as manager
+POST http://localhost:8080/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "manager@bookinghub.local",
+  "password": "123456"
+}
+
+### Login as user
+POST http://localhost:8080/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "user@bookinghub.local",
+  "password": "123456"
+}
+
+### Me (replace token)
+GET http://localhost:8080/api/auth/me
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjMsInJvbGUiOiJVU0VSIiwic3ViIjoiMyIsImV4cCI6MTc2NjY3MDE4NywiaWF0IjoxNzY2NjY5Mjg3fQ.mVEdcaPplJfY76PhhfSMvhm9x0G5dwe0bqnrdwFTPmo
+
+### Me without token (should be 401)
+GET http://localhost:8080/api/auth/me
+
+#########################################################
+
+### Login as user
+POST http://localhost:8080/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "user@bookinghub.local",
+  "password": "123456"
+}
+
+### Create booking (замени TOKEN и resourceId)
+POST http://localhost:8080/api/bookings
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjMsInJvbGUiOiJVU0VSIiwic3ViIjoiMyIsImV4cCI6MTc2NjY3MTA0MiwiaWF0IjoxNzY2NjcwMTQyfQ.3si73QJGppXxOOiK7YN-_uU-AaZSlOFn6IX4l38rSc0
+
+{
+  "resourceId": 2,
+  "startAt": "2025-12-26T12:00:00",
+  "endAt": "2025-12-26T13:00:00"
+}
+
+### My bookings
+GET http://localhost:8080/api/bookings/my
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjMsInJvbGUiOiJVU0VSIiwic3ViIjoiMyIsImV4cCI6MTc2NjY3MTA0MiwiaWF0IjoxNzY2NjcwMTQyfQ.3si73QJGppXxOOiK7YN-_uU-AaZSlOFn6IX4l38rSc0
+
+### Login manager
+POST http://localhost:8080/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "manager@bookinghub.local",
+  "password": "123456"
+}
+
+### Pending bookings (manager)
+GET http://localhost:8080/api/bookings/pending
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjIsInJvbGUiOiJNQU5BR0VSIiwic3ViIjoiMiIsImV4cCI6MTc2NjY3MzE1NywiaWF0IjoxNzY2NjcyMjU3fQ.u03BYXbtb7iaXWNIVgm6gK9yLWZI8k3lz08kOXpF0Qg
+
+### Approve booking (manager) - id в query
+PATCH http://localhost:8080/api/bookings/5/status
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjIsInJvbGUiOiJNQU5BR0VSIiwic3ViIjoiMiIsImV4cCI6MTc2NjY3MzE1NywiaWF0IjoxNzY2NjcyMjU3fQ.u03BYXbtb7iaXWNIVgm6gK9yLWZI8k3lz08kOXpF0Qg
+
+{
+  "status": "APPROVED",
+  "managerComment": "Подтверждено"
+}
