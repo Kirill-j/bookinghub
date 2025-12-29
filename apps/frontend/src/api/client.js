@@ -1,3 +1,8 @@
+// Определяем базовый URL: 
+// Если есть переменная окружения (для облака), берем её. 
+// Иначе оставляем пустую строку (для локальной разработки через proxy).
+const BASE_URL = import.meta.env.VITE_API_URL || '';
+
 export function getToken() {
   return localStorage.getItem('accessToken') || ''
 }
@@ -8,7 +13,8 @@ export function saveToken(token) {
 }
 
 export async function apiText(path, token = '') {
-  const r = await fetch(path, {
+  // Добавляем BASE_URL перед путем
+  const r = await fetch(`${BASE_URL}${path}`, {
     headers: token ? { Authorization: `Bearer ${token}` } : undefined,
   })
   if (!r.ok) throw new Error(await r.text())
@@ -19,7 +25,8 @@ export async function apiJson(path, opts = {}, token = '') {
   const headers = { ...(opts.headers || {}) }
   if (token) headers.Authorization = `Bearer ${token}`
 
-  const r = await fetch(path, { ...opts, headers })
+  // Добавляем BASE_URL перед путем
+  const r = await fetch(`${BASE_URL}${path}`, { ...opts, headers })
   if (!r.ok) throw new Error(await r.text())
   return r.json()
 }
