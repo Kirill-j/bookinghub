@@ -12,7 +12,7 @@ export default function MyBookings({ me, myBookings, onCancelBooking }) {
           {myBookings.map((b) => (
             <li key={b.id} style={{ marginBottom: 8 }}>
               <b>#{b.id}</b> ресурс #{b.resourceId} — {String(b.startAt)} → {String(b.endAt)} — <b>{b.status}</b>{' '}
-              {(b.status === 'PENDING' || b.status === 'APPROVED') && (
+              {(b.status === 'ОЖИДАНИЕ' || b.status === 'ПОДТВЕРЖДЕНО') && (
                 <button style={{ marginLeft: 8 }} onClick={() => onCancelBooking(b.id)}>
                   Отменить
                 </button>
