@@ -17,7 +17,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.22'
+          go-version: '1.22.12'
           cache: true
 
       - name: Verify Go toolchain
@@ -26,15 +26,20 @@ jobs:
           which go
           go version
           go env GOROOT GOPATH GOTOOLCHAIN
-          go tool cover -h
+          go tool cover -V
+
+      # ВАЖНО: запрещаем автоскачивание нового toolchain (go1.25.x)
+      - name: Pin toolchain to local Go
+        working-directory: apps/backend
+        run: |
+          go env -w GOTOOLCHAIN=local
+          go env GOTOOLCHAIN
+          go version
 
       - name: Download dependencies
         working-directory: apps/backend
         run: go mod download
 
-      # ВАЖНО:
-      # Исключаем пакеты, которые вызывают `go tool covdata`
-      # cmd/hash и internal/db не участвуют в тестах API
       - name: Run tests with coverage
         working-directory: apps/backend
         run: |
