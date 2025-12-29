@@ -15,6 +15,7 @@ import ProfilePending from './pages/profile/ProfilePending'
 import ProfileMyBookings from './pages/profile/ProfileMyBookings'
 import ProfileNewListing from './pages/profile/ProfileNewListing'
 import UserPage from './pages/UserPage'
+import AdminCategoriesPage from './pages/AdminCategoriesPage'
 
 
 function HomeRoute(props) {
@@ -273,6 +274,11 @@ export default function App() {
           </Route>
 
           <Route path="/users/:id" element={<UserPage token={token} />} />
+
+          <Route
+            path="/admin/categories"
+            element={<AdminCategoriesPage token={token} me={me} />}
+          />
         </Routes>
       </AppShell>
     </BrowserRouter>

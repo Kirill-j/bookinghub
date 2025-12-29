@@ -1,4 +1,5 @@
-import { Link } from 'react-router-dom'
+import { Link, NavLink } from 'react-router-dom'
+
 
 export default function AppShell({ me, onLogout, children }) {
   return (
@@ -15,6 +16,9 @@ export default function AppShell({ me, onLogout, children }) {
 
           <div className="topbar-right">
             <div className="topbar-nav">
+              {me?.role === 'ADMIN' ? (
+                <NavLink className="nav-link" to="/admin/categories">Админ</NavLink>
+              ) : null}
               <Link className="nav-link" to="/">Каталог</Link>
               <Link className="nav-link" to="/profile">Профиль</Link>
             </div>
