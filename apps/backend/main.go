@@ -40,7 +40,8 @@ func main() {
 	dbPass := getEnv("DB_PASSWORD", "")
 	dbName := getEnv("DB_NAME", "bookinghub")
 
-	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?parseTime=true&charset=utf8mb4&collation=utf8mb4_unicode_ci",
+	// Добавлен параметр &tls=skip-verify в конце строки
+	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?parseTime=true&charset=utf8mb4&collation=utf8mb4_unicode_ci&tls=skip-verify",
 		dbUser, dbPass, dbHost, dbPort, dbName,
 	)
 
@@ -71,6 +72,26 @@ func main() {
 	userHandler := handler.NewUserHandler(userRepo)
 
 	r := chi.NewRouter()
+
+	// --- НАЧАЛО ВСТАВКИ CORS ---
+	r.Use(func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// Разрешаем запросы с любого домена (для тестов это ок)
+			w.Header().Set("Access-Control-Allow-Origin", "*")
+			// Разрешаем стандартные методы
+			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
+			// Разрешаем заголовки, которые важны для JSON и авторизации
+			w.Header().Set("Access-Control-Allow-Headers", "Accept, Authorization, Content-Type, X-CSRF-Token")
+
+			// Если это предварительный запрос (OPTIONS), сразу отвечаем 200
+			if r.Method == "OPTIONS" {
+				w.WriteHeader(http.StatusOK)
+				return
+			}
+			next.ServeHTTP(w, r)
+		})
+	})
+	// --- КОНЕЦ ВСТАВКИ CORS ---
 
 	// Логи + базовая защита от паники
 	r.Use(middleware.RequestID)
